@@ -1,80 +1,100 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Transfer your first file with croc in under a minute. Install croc, send a file, and receive it on another machine using a short code phrase."
 ---
 
-## Get started in three steps
+croc makes file transfer as simple as running one command on each side. The sender gets a code phrase; the receiver uses it to connect. All data is end-to-end encrypted via PAKE before it reaches the relay.
 
-Get your documentation site running locally and make your first customization.
+<Steps>
+  <Step title="Install croc">
+    Install croc using your preferred method. The quickest way on macOS or Linux:
 
-### Step 1: Set up your local environment
+    ```bash
+    curl https://getcroc.schollz.com | bash
+    ```
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    On macOS with Homebrew:
 
-### Step 2: Deploy your changes
+    ```bash
+    brew install croc
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    On Windows with Scoop:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash
+    scoop install croc
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    For all platforms and package managers, see the [installation guide](/installation).
+  </Step>
+  <Step title="Send a file">
+    On the sending machine, run:
 
-### Step 3: Go live
+    ```bash
+    croc send file.txt
+    ```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    croc prints a code phrase and waits for the receiver to connect:
 
-## Next steps
+    ```
+    Sending 'file.txt' (1.2 MB)
+    Code is: grove-angle-mauve
+    ```
 
-Now that you have your docs running, explore these key features:
+    The code phrase is also copied to your clipboard automatically. Share it with the recipient through any channel — chat, email, or read it aloud.
 
-<CardGroup cols={2}>
+    To send a folder or multiple files:
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    ```bash
+    croc send folder/
+    croc send file1.txt file2.txt file3.txt
+    ```
+  </Step>
+  <Step title="Receive the file">
+    On the receiving machine, use the code phrase to start the transfer.
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+    <Tabs>
+      <Tab title="Linux / macOS">
+        On Linux and macOS, pass the code phrase as an environment variable to avoid [leaking the secret via the process list](https://nvd.nist.gov/vuln/detail/CVE-2023-43621) (CVE-2023-43621):
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+        ```bash
+        CROC_SECRET=grove-angle-mauve croc
+        ```
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+        Alternatively, run `croc` with no arguments and enter the code phrase when prompted:
 
-</CardGroup>
+        ```bash
+        croc
+        # Enter receive code: grove-angle-mauve
+        ```
+      </Tab>
+      <Tab title="Windows">
+        On Windows, pass the code phrase directly as an argument:
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+        ```bash
+        croc grove-angle-mauve
+        ```
+      </Tab>
+    </Tabs>
+
+    croc connects to the sender via the relay, performs the PAKE handshake, and downloads the file:
+
+    ```
+    Receiving 'file.txt' (1.2 MB)
+    grove-angle-mauve
+    100% |████████████████████| (1.2/1.2 MB, 4.6 MB/s)
+    ```
+  </Step>
+</Steps>
+
+## Code phrase and security
+
+The code phrase (e.g. `grove-angle-mauve`) is a short random string generated by the sender. It seeds a [Password Authenticated Key Exchange (PAKE)](https://en.wikipedia.org/wiki/Password-authenticated_key_agreement) protocol between the two machines, which derives a shared encryption key without ever transmitting the password over the network. The relay at `croc.schollz.com:9009` brokers the connection but never sees plaintext data.
+
+<Warning>
+  On Linux and macOS, passing the code phrase as a command-line argument (e.g. `croc grove-angle-mauve`) exposes it in the system process list, where other local users can read it. Always use `CROC_SECRET=<phrase> croc` on multi-user systems. On single-user systems, you can permanently restore the classic behavior with `croc --classic`.
+</Warning>
+
+## What's next
+
+- [Sending files](/guides/sending-files) — send multiple files, folders, text, pipe data, use QR codes, and more.

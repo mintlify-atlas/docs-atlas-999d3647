@@ -1,0 +1,155 @@
+---
+title: "Send files, folders, and text with croc"
+description: "Learn how to send files, folders, text, and piped data with croc — including custom code phrases, exclude patterns, QR codes, and upload throttling."
+---
+
+croc lets you send any file, folder, or text snippet to another computer using a short code phrase. The sender runs `croc send`, shares the generated code, and the recipient uses it to download — no port forwarding or server setup required.
+
+## Basic usage
+
+<Steps>
+  <Step title="Send a file or folder">
+    Run `croc send` with one or more files or a folder:
+
+    ```bash
+    croc send [file(s)-or-folder]
+    ```
+
+    croc prints the transfer size and a generated code phrase:
+
+    ```
+    Sending 'filename' (4.2 MB)
+    Code is: word-word-word
+
+    On the other computer run:
+    (For Windows)
+        croc word-word-word
+    (For Linux/macOS)
+        CROC_SECRET="word-word-word" croc
+    ```
+
+    The code is also copied to your clipboard automatically.
+  </Step>
+  <Step title="Share the code with the recipient">
+    Give the recipient the code phrase shown in the terminal. They run it on their machine to download the file.
+  </Step>
+</Steps>
+
+## Sending multiple files
+
+List files and folders as separate arguments:
+
+```bash
+croc send file1.txt file2.txt file3.txt
+```
+
+Wildcards are also supported:
+
+```bash
+croc send *.jpg
+```
+
+## Sending a folder
+
+Pass a folder name directly. croc walks the directory tree and transfers all contents, preserving structure:
+
+```bash
+croc send my-project/
+```
+
+## Custom code phrase
+
+By default croc generates a random code. Use `--code` to set your own (must be more than 6 characters):
+
+<Tabs>
+  <Tab title="Windows / classic mode">
+    ```bash
+    croc send --code secret-code file.txt
+    ```
+  </Tab>
+  <Tab title="Linux / macOS">
+    On UNIX systems, pass the secret via the environment variable to avoid exposing it in the process list:
+
+    ```bash
+    CROC_SECRET=secret-code croc send file.txt
+    ```
+
+    <Warning>
+      Passing the code phrase directly on the command line on Linux or macOS exposes it in the system process list, which other local users can read. This was tracked as [CVE-2023-43621](https://nvd.nist.gov/vuln/detail/CVE-2023-43621). Use `CROC_SECRET` instead, or run `croc --classic` to permanently enable the classic behavior on single-user systems.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Sending text
+
+Send a short string or URL without creating a file first:
+
+```bash
+croc send --text "hello world"
+```
+
+The recipient sees the text printed directly to their terminal.
+
+## Sending from stdin
+
+Pipe any command's output directly into croc:
+
+```bash
+cat file.txt | croc send
+```
+
+croc reads from stdin and transfers the data as a temporary file. Use `--ignore-stdin` if you want to prevent croc from reading a pipe when one is present.
+
+## Folder options
+
+| Flag | Description |
+|------|-------------|
+| `--exclude "node_modules,.venv"` | Skip files or folders whose paths contain any of the comma-separated strings. |
+| `--zip` | Compress the folder into a zip archive before sending. The recipient receives a single `.zip` file. |
+| `--git` | Respect `.gitignore` rules and skip ignored files. |
+
+Example combining exclude and git ignore:
+
+```bash
+croc send --git --exclude "node_modules,.venv" my-project/
+```
+
+## Clipboard and QR code
+
+By default the code phrase is copied to your clipboard. You can change this behavior:
+
+```bash
+# Disable clipboard copy
+croc --disable-clipboard send file.txt
+
+# Copy the full receive command including CROC_SECRET (useful on Linux/macOS)
+croc --extended-clipboard send file.txt
+```
+
+`--extended-clipboard` copies a ready-to-run command like `CROC_SECRET="word-word-word" croc`, including any relay or password flags you used.
+
+To display the code as a QR code for scanning with a mobile device:
+
+```bash
+croc send --qr file.txt
+```
+
+## Quiet mode
+
+Suppress all output, useful in scripts or automation:
+
+```bash
+croc --quiet send file.txt
+```
+
+## Throttle upload speed
+
+Limit the upload rate with `--throttleUpload`. Append `k` for kilobytes/s, `m` for megabytes/s, or `g` for gigabytes/s:
+
+```bash
+croc --throttleUpload 500k send largefile.iso
+```
+
+<Note>
+  `--throttleUpload` is a global flag and must be placed before the `send` subcommand.
+</Note>

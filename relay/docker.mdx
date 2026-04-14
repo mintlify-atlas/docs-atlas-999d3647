@@ -1,0 +1,86 @@
+---
+title: "Deploy a croc relay server with Docker"
+description: "Run a self-hosted croc relay as a Docker container using docker run or Docker Compose. Includes health check details and firewall requirements."
+---
+
+The official `schollz/croc` image runs the relay by default. It exposes ports 9009–9013 and reads the relay password from the `CROC_PASS` environment variable, so no configuration files are needed.
+
+## Run with docker run
+
+Start the relay in detached mode, mapping all five relay ports and setting a password:
+
+```bash
+docker run -d \
+  -p 9009-9013:9009-9013 \
+  -e CROC_PASS='YOURPASSWORD' \
+  docker.io/schollz/croc
+```
+
+The container entrypoint automatically prepends `--pass "$CROC_PASS"` before launching `croc relay`, so the `CROC_PASS` variable is the only configuration required.
+
+<Warning>
+  Always set `CROC_PASS` to a strong, unique secret. Leaving it at the default `pass123` allows anyone who knows the address to use your relay.
+</Warning>
+
+## Run with Docker Compose
+
+For a more reproducible setup, use a Compose file:
+
+```yaml docker-compose.yml
+services:
+  croc-relay:
+    image: docker.io/schollz/croc
+    restart: unless-stopped
+    ports:
+      - "9009-9013:9009-9013"
+    environment:
+      CROC_PASS: "YOURPASSWORD"
+```
+
+Start the service:
+
+```bash
+docker compose up -d
+```
+
+Check that it is running:
+
+```bash
+docker compose ps
+docker compose logs croc-relay
+```
+
+## Health check
+
+The image includes a built-in health check that connects to port 9009 every 30 seconds:
+
+```
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3
+    CMD nc -z localhost 9009 || exit 1
+```
+
+Docker reports the container as `healthy` once the check passes. You can view the current health status with:
+
+```bash
+docker inspect --format='{{.State.Health.Status}}' <container-name>
+```
+
+## Send files to the containerized relay
+
+Point both sender and receiver at your host and supply the same password you set in `CROC_PASS`:
+
+**Sender:**
+
+```bash
+croc --pass YOURPASSWORD --relay "myrelay.example.com:9009" send file.txt
+```
+
+**Receiver:**
+
+```bash
+croc --pass YOURPASSWORD --relay "myrelay.example.com:9009" <code>
+```
+
+<Note>
+  Make sure TCP ports 9009–9013 are open in your firewall or cloud security group. All five ports must be reachable from the client machines.
+</Note>

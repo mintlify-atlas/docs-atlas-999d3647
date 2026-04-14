@@ -1,0 +1,267 @@
+---
+title: "croc send, relay, and receive command reference"
+description: "Full syntax and flag reference for croc send, croc relay, and croc receive. Includes all per-command flags and practical usage examples."
+---
+
+croc exposes three main operations: sending files with `croc send`, running your own relay server with `croc relay`, and receiving files by passing a code phrase as a positional argument to `croc`. Global flags apply to all commands and are documented separately in the [global flags reference](/reference/flags).
+
+## croc send
+
+Send one or more files or a folder to another computer.
+
+**Syntax**
+
+```bash
+croc send [OPTIONS] [filename(s) or folder]
+```
+
+**Description**
+
+`croc send` transfers files and folders to a waiting receiver. croc generates a random code phrase and displays it on screen. On Linux and macOS, use the `CROC_SECRET` environment variable to set a custom code phrase to avoid exposing it in the process list. The sender connects through the configured relay (default: `croc.schollz.com:9009`) using PAKE-based end-to-end encryption.
+
+**Flags**
+
+<ParamField path="--zip" type="boolean">
+  Zip the folder before sending. Useful when sending a directory as a single archive.
+</ParamField>
+
+<ParamField path="--code" type="string">
+  Custom code phrase to connect to the relay. Alias: `-c`. On Linux and macOS, set `CROC_SECRET` instead to avoid process list exposure.
+</ParamField>
+
+<ParamField path="--hash" type="string" default="xxhash">
+  Hash algorithm used for file integrity verification. Accepted values: `xxhash`, `imohash`, `md5`. Use `imohash` for faster hashing of large files.
+</ParamField>
+
+<ParamField path="--text" type="string">
+  Send a short text string instead of a file. Alias: `-t`. The text is written to a temporary file and sent.
+</ParamField>
+
+<ParamField path="--no-local" type="boolean">
+  Disable the local relay when sending. Forces all traffic through the remote relay.
+</ParamField>
+
+<ParamField path="--no-multi" type="boolean">
+  Disable multiplexing. Transfers use a single connection instead of multiple parallel ports.
+</ParamField>
+
+<ParamField path="--git" type="boolean">
+  Respect `.gitignore` rules when sending a folder. Files matched by `.gitignore` are excluded.
+</ParamField>
+
+<ParamField path="--port" type="integer" default="9009">
+  Base port for the relay connection. Subsequent transfer ports are allocated sequentially starting from this value.
+</ParamField>
+
+<ParamField path="--transfers" type="integer" default="4">
+  Number of ports to use for parallel transfers. Increasing this can improve throughput on fast networks.
+</ParamField>
+
+<ParamField path="--qrcode" type="boolean">
+  Display the receive code as a QR code in the terminal. Alias: `--qr`. Useful for sharing with mobile devices.
+</ParamField>
+
+<ParamField path="--exclude" type="string">
+  Comma-separated list of strings. Files and folders whose paths contain any of these strings are excluded from the transfer. Matching is case-insensitive.
+</ParamField>
+
+<ParamField path="--socks5" type="string">
+  SOCKS5 proxy address to route the transfer through (e.g. `127.0.0.1:9050`). Can also be set via the `SOCKS5_PROXY` environment variable.
+</ParamField>
+
+<ParamField path="--connect" type="string">
+  HTTP proxy address to route the transfer through. Can also be set via the `HTTP_PROXY` environment variable.
+</ParamField>
+
+**Examples**
+
+<CodeGroup>
+
+```bash Send a single file
+croc send file.txt
+```
+
+```bash Send multiple files
+croc send file1.txt file2.txt file3.txt
+```
+
+```bash Send a folder
+croc send my-folder/
+```
+
+```bash Send with a custom code phrase (Linux/macOS)
+CROC_SECRET="my-secret-code" croc send file.txt
+```
+
+```bash Send with a custom code phrase (Windows or classic mode)
+croc send --code my-secret-code file.txt
+```
+
+```bash Send text
+croc send --text "https://example.com"
+```
+
+```bash Send a folder, zipped, excluding node_modules
+croc send --zip --exclude "node_modules" my-project/
+```
+
+```bash Send a folder respecting .gitignore
+croc send --git my-project/
+```
+
+```bash Send with QR code displayed
+croc send --qr file.txt
+```
+
+```bash Pipe stdin to croc
+cat file.txt | croc send
+```
+
+```bash Send via SOCKS5 proxy (e.g. Tor)
+croc --socks5 "127.0.0.1:9050" send file.txt
+```
+
+```bash Send using a self-hosted relay
+croc --relay "myrelay.example.com:9009" send file.txt
+```
+
+</CodeGroup>
+
+---
+
+## croc relay
+
+Start a self-hosted relay server.
+
+**Syntax**
+
+```bash
+croc relay [OPTIONS]
+```
+
+**Description**
+
+`croc relay` runs a TCP relay that sender and receiver use to broker the connection and exchange encrypted data. By default it listens on ports `9009–9013`. At least two ports are required: the first is the control port and the rest are used for data transfer. You can run the relay on your own infrastructure and point clients to it with `--relay`.
+
+**Flags**
+
+<ParamField path="--host" type="string">
+  Hostname or IP address the relay listens on. Defaults to all interfaces if not set.
+</ParamField>
+
+<ParamField path="--ports" type="string" default="9009,9010,9011,9012,9013">
+  Comma-separated list of ports for the relay. Takes precedence over `--port` and `--transfers` when set. At least two ports are required.
+</ParamField>
+
+<ParamField path="--port" type="integer" default="9009">
+  Base port. Used together with `--transfers` to generate a sequential port list when `--ports` is not explicitly set.
+</ParamField>
+
+<ParamField path="--transfers" type="integer" default="5">
+  Number of ports to allocate starting from `--port`. Ignored when `--ports` is set.
+</ParamField>
+
+<Warning>
+  The relay requires at least two ports. Specifying `--transfers 1` or `--ports` with a single port will produce an error.
+</Warning>
+
+**Examples**
+
+<CodeGroup>
+
+```bash Start relay with default ports (9009–9013)
+croc relay
+```
+
+```bash Start relay on custom ports
+croc relay --ports 1111,1112,1113
+```
+
+```bash Start relay bound to a specific host
+croc relay --host 0.0.0.0 --ports 9009,9010,9011
+```
+
+```bash Start relay with password protection
+croc --pass "mysecretpass" relay
+```
+
+```bash Run relay in Docker
+docker run -d -p 9009-9013:9009-9013 -e CROC_PASS='YOURPASSWORD' docker.io/schollz/croc
+```
+
+</CodeGroup>
+
+Once the relay is running, point senders and receivers to it:
+
+```bash
+croc --relay "myrelay.example.com:9009" send file.txt
+croc --relay "myrelay.example.com:9009" <code-phrase>
+```
+
+---
+
+## croc \<code-phrase\> (receive)
+
+Receive a file using a code phrase.
+
+**Syntax**
+
+```bash
+croc [GLOBAL OPTIONS] <code-phrase>
+```
+
+```bash
+croc [GLOBAL OPTIONS]
+```
+
+**Description**
+
+Passing a code phrase as a positional argument to `croc` (without a subcommand) triggers the receive action. The code phrase can be supplied as:
+
+- A single hyphenated string: `croc word1-word2-word3`
+- Three or four separate words: `croc word1 word2 word3`
+- Not supplied at all: croc will prompt `Enter receive code:` with tab-completion
+
+On Linux and macOS (when classic mode is disabled), the code phrase must be set via the `CROC_SECRET` environment variable to prevent it from appearing in the process list. Passing it as a command-line argument on these platforms will show a usage reminder and exit.
+
+<Note>
+  Tab completion is available at the `Enter receive code:` prompt. Partial word entry is completed against the croc mnemonic word list, and a `-` is appended automatically between words.
+</Note>
+
+**Examples**
+
+<CodeGroup>
+
+```bash Receive using full code phrase
+croc word1-word2-word3
+```
+
+```bash Receive with words as separate arguments
+croc word1 word2 word3
+```
+
+```bash Receive interactively (prompted for code)
+croc
+```
+
+```bash Receive with CROC_SECRET (Linux/macOS recommended)
+CROC_SECRET="word1-word2-word3" croc
+```
+
+```bash Receive to a specific output folder
+croc --out /tmp/downloads word1-word2-word3
+```
+
+```bash Receive and write to stdout
+croc --yes --stdout word1-word2-word3 > received-file.bin
+```
+
+```bash Receive and automatically overwrite existing files
+croc --yes --overwrite word1-word2-word3
+```
+
+```bash Receive via a self-hosted relay
+croc --relay "myrelay.example.com:9009" word1-word2-word3
+```
+
+</CodeGroup>

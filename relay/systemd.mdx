@@ -1,0 +1,128 @@
+---
+title: "Run croc relay as a persistent systemd service"
+description: "Install the croc relay as a systemd unit on Linux for automatic startup, crash recovery, and centralized log management with journalctl."
+---
+
+Running the relay under systemd means it starts automatically at boot, restarts if it crashes, and integrates with the standard Linux tooling for logs and service management. The `croc.service` unit file in the repository is ready to use with no changes required for a default installation.
+
+## Install the croc binary
+
+Install croc on your server before setting up the service. The quickest method is the install script:
+
+```bash
+curl https://getcroc.schollz.com | bash
+```
+
+Confirm the binary is in place:
+
+```bash
+which croc
+croc --version
+```
+
+The service file expects the binary at `/usr/bin/croc`. If your install placed it elsewhere, either move it or update the `ExecStart` path in the unit file.
+
+## Set up the systemd unit
+
+<Steps>
+  <Step title="Copy the unit file">
+    Copy `croc.service` from the repository to the systemd system directory:
+
+    ```bash
+    sudo cp croc.service /etc/systemd/system/croc.service
+    ```
+
+    The unit file contents are:
+
+    ```ini croc.service
+    [Unit]
+    Description=croc relay
+    After=network.target
+
+    [Service]
+    Type=simple
+    DynamicUser=yes
+    CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+    ExecStart=/usr/bin/croc relay
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+    Key settings:
+
+    - **`DynamicUser=yes`** — systemd creates a transient, unprivileged user for the service at runtime. The relay never runs as root.
+    - **`CapabilityBoundingSet=CAP_NET_BIND_SERVICE`** — restricts the capabilities available to the process.
+    - **`After=network.target`** — the service starts only after the network is up.
+  </Step>
+
+  <Step title="Reload systemd">
+    Tell systemd to pick up the new unit file:
+
+    ```bash
+    sudo systemctl daemon-reload
+    ```
+  </Step>
+
+  <Step title="Enable and start the service">
+    Enable the service so it starts at boot, then start it immediately:
+
+    ```bash
+    sudo systemctl enable croc
+    sudo systemctl start croc
+    ```
+  </Step>
+
+  <Step title="Verify the service is running">
+    Check the service status:
+
+    ```bash
+    sudo systemctl status croc
+    ```
+
+    You should see `active (running)` in the output. The relay listens on ports 9009–9013 by default.
+  </Step>
+</Steps>
+
+## Manage the service
+
+Common management commands:
+
+```bash
+sudo systemctl stop croc       # stop the relay
+sudo systemctl restart croc    # restart after a config change
+sudo systemctl disable croc    # remove from boot sequence
+```
+
+## View logs
+
+Stream live logs from the relay:
+
+```bash
+journalctl -u croc -f
+```
+
+Show logs since the last boot:
+
+```bash
+journalctl -u croc -b
+```
+
+<Note>
+  Because `DynamicUser=yes` is set, the service runs as a dynamically allocated non-root user. If you need to pass a custom `--pass` or other flags, add them to `ExecStart` in the unit file and run `sudo systemctl daemon-reload && sudo systemctl restart croc` to apply the change.
+</Note>
+
+## Open firewall ports
+
+If your server runs a firewall, open the relay ports. With `ufw`:
+
+```bash
+sudo ufw allow 9009:9013/tcp
+```
+
+With `firewalld`:
+
+```bash
+sudo firewall-cmd --permanent --add-port=9009-9013/tcp
+sudo firewall-cmd --reload
+```

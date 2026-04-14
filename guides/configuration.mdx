@@ -1,0 +1,127 @@
+---
+title: "Configure croc relay, defaults, and DNS settings"
+description: "Save relay addresses, passwords, encryption curves, and other preferences with --remember so croc reuses them automatically on the next run."
+---
+
+croc stores per-command configuration in JSON files under `~/.config/croc/`. You can persist any combination of flags by passing `--remember` once, and croc will merge those saved values with any flags you explicitly set on future runs. Explicit flags always win over remembered values.
+
+## Config file locations
+
+| Command | Config file |
+|---|---|
+| `croc send` | `~/.config/croc/send.json` |
+| `croc` (receive) | `~/.config/croc/receive.json` |
+
+The files are written as indented JSON containing the fields of the `Options` struct. You can edit them directly if needed.
+
+## Saving defaults with --remember
+
+Pass `--remember` on any `send` or receive invocation to write the current options to disk:
+
+```bash
+croc --remember --relay "myrelay.example.com:9009" --pass hunter2 send file.txt
+```
+
+On the next run, `croc send` will automatically use `myrelay.example.com:9009` and `hunter2` without you specifying them again.
+
+<Note>
+If you also supply a flag explicitly on a later run, that value takes precedence over the remembered value. `--remember` only updates the saved file when it is present in the current invocation.
+</Note>
+
+### What gets saved
+
+The following settings are persisted by `--remember`:
+
+| Field | Flag | Description |
+|---|---|---|
+| Relay address | `--relay` | Custom relay host and port |
+| IPv6 relay address | `--relay6` | Custom IPv6 relay host and port |
+| Relay password | `--pass` | Password for the relay |
+| Overwrite mode | `--overwrite` | Skip the overwrite/resume prompt |
+| Encryption curve | `--curve` | Elliptic curve used for PAKE |
+| Local-only mode | `--local` | Force transfers over LAN only |
+| Hash algorithm | `--hash` | `xxhash`, `imohash`, or `md5` |
+| Gitignore support | `--git` | Respect `.gitignore` when sending |
+
+The code phrase (`--code`) is only saved if it was explicitly set; otherwise it is cleared so croc generates a fresh one each time.
+
+### Example send.json
+
+```json
+{
+    "IsSender": true,
+    "SharedSecret": "",
+    "RelayAddress": "non-default: myrelay.example.com:9009",
+    "RelayAddress6": "default",
+    "RelayPassword": "hunter2",
+    "Overwrite": false,
+    "Curve": "p256",
+    "OnlyLocal": false,
+    "HashAlgorithm": "xxhash",
+    "GitIgnore": false
+}
+```
+
+Non-default relay values are prefixed with `non-default:` so croc can distinguish them from the built-in defaults when loading the file.
+
+## Relay configuration
+
+### Default relay
+
+croc uses `croc.schollz.com:9009` (IPv4) and `croc6.schollz.com:9009` (IPv6) by default. Both are tried automatically; the faster connection wins.
+
+### Custom relay
+
+<Tabs>
+  <Tab title="Flag">
+    ```bash
+    croc --relay "myrelay.example.com:9009" send file.txt
+    ```
+  </Tab>
+  <Tab title="Environment variable">
+    ```bash
+    export CROC_RELAY="myrelay.example.com:9009"
+    croc send file.txt
+    ```
+  </Tab>
+</Tabs>
+
+Use `--relay6` or `CROC_RELAY6` for an IPv6-only relay address.
+
+### Custom relay password
+
+<Tabs>
+  <Tab title="Flag">
+    ```bash
+    croc --pass "hunter2" send file.txt
+    ```
+  </Tab>
+  <Tab title="Environment variable">
+    ```bash
+    export CROC_PASS="hunter2"
+    croc send file.txt
+    ```
+  </Tab>
+</Tabs>
+
+The default relay password is `pass123`. If you self-host a relay with a custom password, both the sender and receiver must supply the same `--pass` value.
+
+## DNS resolution
+
+By default croc uses the operating system's DNS resolver. Pass `--internal-dns` to use croc's built-in stub resolver, which queries a list of public DNS servers (Cloudflare, Google, Quad9, Cisco OpenDNS) directly:
+
+```bash
+croc --internal-dns send file.txt
+```
+
+This setting is also persisted to `~/.config/croc/internal-dns` when `--remember` is used alongside `--internal-dns`.
+
+## Debug mode
+
+Enable verbose logging with `--debug`:
+
+```bash
+croc --debug send file.txt
+```
+
+Debug mode prints the resolved public IP address and detailed connection information to stderr. To suppress all output instead, use `--quiet`.

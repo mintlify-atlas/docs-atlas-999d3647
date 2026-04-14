@@ -1,0 +1,159 @@
+---
+title: "Install croc on macOS, Windows, and Linux"
+description: "Install croc using Homebrew, Scoop, Chocolatey, pacman, Docker, or build from source. Covers every major platform and package manager."
+---
+
+croc is available through most major package managers on macOS, Windows, and Linux, and can also be installed with a single `curl` command or built from source. Choose the method that fits your environment.
+
+## Quick install (Linux, macOS, Alpine)
+
+The fastest way to get croc on any POSIX system is the install script:
+
+```bash
+curl https://getcroc.schollz.com | bash
+```
+
+For Alpine Linux, install the required dependencies first:
+
+```bash
+apk add bash coreutils
+wget -qO- https://getcroc.schollz.com | bash
+```
+
+## Package managers
+
+<Tabs>
+  <Tab title="macOS">
+    **Homebrew**
+
+    ```bash
+    brew install croc
+    ```
+
+    **MacPorts**
+
+    ```bash
+    sudo port selfupdate
+    sudo port install croc
+    ```
+  </Tab>
+  <Tab title="Windows">
+    **Scoop**
+
+    ```bash
+    scoop install croc
+    ```
+
+    **Chocolatey**
+
+    ```bash
+    choco install croc
+    ```
+
+    **Winget**
+
+    ```bash
+    winget install schollz.croc
+    ```
+  </Tab>
+  <Tab title="Linux">
+    **Arch Linux**
+
+    ```bash
+    pacman -S croc
+    ```
+
+    **Fedora**
+
+    ```bash
+    dnf install croc
+    ```
+
+    **Gentoo**
+
+    ```bash
+    emerge net-misc/croc
+    ```
+
+    **Termux (Android)**
+
+    ```bash
+    pkg install croc
+    ```
+
+    **FreeBSD**
+
+    ```bash
+    pkg install croc
+    ```
+
+    **Nix**
+
+    ```bash
+    nix-env -i croc
+    ```
+
+    **NixOS** — add to `configuration.nix`:
+
+    ```nix
+    environment.systemPackages = [
+      pkgs.croc
+    ];
+    ```
+  </Tab>
+  <Tab title="Conda">
+    Install globally with [pixi](https://pixi.sh/):
+
+    ```bash
+    pixi global install croc
+    ```
+
+    Or into a specific environment with [conda](https://docs.conda.io/projects/conda/):
+
+    ```bash
+    conda install --channel conda-forge croc
+    ```
+  </Tab>
+</Tabs>
+
+## Docker
+
+Add the following function to your `~/.profile` to use croc via Docker without installing Go:
+
+```bash
+croc() { [ $# -eq 0 ] && set -- ""; mkdir -p "$HOME/.config/croc"; docker run --rm -it --user "$(id -u):$(id -g)" -v "$(pwd):/c" -v "$HOME/.config/croc:/.config/croc" -w /c -e CROC_SECRET docker.io/schollz/croc "$@"; }
+```
+
+You can also paste it directly in your terminal for a single session. On first run, Docker pulls the image automatically.
+
+<Tip>
+  croc via Docker only has access to your current directory and its subdirectories. Make sure to run it from the directory containing the files you want to send.
+</Tip>
+
+## Build from source
+
+If you prefer to build croc yourself, install [Go](https://go.dev/dl/) (requires Go 1.25+) and run:
+
+```bash
+go install github.com/schollz/croc/v10@latest
+```
+
+The binary is installed to your `$GOPATH/bin` directory. Make sure that directory is on your `PATH`.
+
+## Android
+
+A third-party GUI for Android is available on [F-Droid](https://f-droid.org/packages/com.github.howeyc.crocgui/).
+
+## Verify the installation
+
+After installing, confirm croc is available:
+
+```bash
+croc --version
+```
+
+You should see output similar to:
+
+```
+croc version v10.4.2
+```

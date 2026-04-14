@@ -1,0 +1,115 @@
+---
+title: "Receive files with croc using a code phrase"
+description: "Accept a croc transfer using CROC_SECRET or the code phrase directly. Set output folders, auto-accept prompts, overwrite files, or stream to stdout."
+---
+
+To receive a file sent with croc, you need the code phrase the sender was given. On Windows, you pass the code directly on the command line. On Linux and macOS, croc uses an environment variable to keep the secret out of the process list.
+
+## Basic receive
+
+<Tabs>
+  <Tab title="Windows">
+    Pass the code phrase as a positional argument:
+
+    ```bash
+    croc word-word-word
+    ```
+  </Tab>
+  <Tab title="Linux / macOS">
+    Set the secret as an environment variable to avoid exposing it in the system process list:
+
+    ```bash
+    CROC_SECRET="word-word-word" croc
+    ```
+
+    <Note>
+      Passing the code phrase as a command-line argument on UNIX systems makes it visible to other local users via tools like `ps`. Using `CROC_SECRET` prevents this. See [CVE-2023-43621](https://nvd.nist.gov/vuln/detail/CVE-2023-43621) for details. Run `croc --classic` to permanently restore the classic command-line behavior on single-user systems.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Accepting the transfer
+
+After entering the code, croc connects to the sender and displays the file name, size, and a prompt:
+
+```
+Accept 'filename' (4.2 MB)? (Y/n)
+```
+
+Press **Enter** or type `y` to accept. Type anything else to decline.
+
+## Auto-accept without prompting
+
+Skip the confirmation prompt with `--yes`:
+
+```bash
+croc --yes word-word-word
+```
+
+On Linux/macOS:
+
+```bash
+CROC_SECRET="word-word-word" croc --yes
+```
+
+## Overwrite existing files
+
+If a file with the same name already exists, croc asks whether to resume or overwrite. To skip that prompt and always overwrite:
+
+```bash
+croc --yes --overwrite word-word-word
+```
+
+<Warning>
+  `--overwrite` silently replaces existing files without any confirmation. Use with care.
+</Warning>
+
+## Specify an output folder
+
+Save received files to a specific directory with `--out`:
+
+```bash
+croc --out /path/to/folder word-word-word
+```
+
+The folder must already exist.
+
+## Receive to stdout
+
+Use the `--stdout` flag to print the received file content to stdout instead of writing it to disk. Combine with `--yes` to skip the acceptance prompt:
+
+```bash
+croc --yes --stdout word-word-word > output.txt
+```
+
+Or pipe directly into another command:
+
+```bash
+croc --yes --stdout word-word-word | tar -xz
+```
+
+## Interactive code entry
+
+If you run `croc` with no arguments, it prompts you to enter the code interactively. Tab completion is available to help complete word-based code phrases:
+
+```
+$ croc
+Enter receive code: wo[TAB]
+word-
+```
+
+This mode is the recommended approach on Linux and macOS when you are not using `CROC_SECRET`.
+
+## Classic mode
+
+By default, croc on Linux and macOS requires the code to be passed via `CROC_SECRET`. You can toggle back to the classic behavior — where the code is passed as a command-line argument — by running:
+
+```bash
+croc --classic
+```
+
+This writes a config file that persists across sessions. Run `croc --classic` again to disable it.
+
+<Warning>
+  Classic mode makes the shared secret visible in the process list on multi-user systems. Only enable it on machines where you are the sole user.
+</Warning>

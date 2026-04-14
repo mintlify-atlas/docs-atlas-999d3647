@@ -1,0 +1,175 @@
+---
+title: "Advanced transfer options for croc"
+description: "Configure croc for piped transfers, speed throttling, hash algorithms, encryption curves, local-only mode, and persistent settings."
+---
+
+Beyond the basic send and receive workflow, croc exposes a set of options for scripting, performance tuning, and network control. This page covers piping, throttling, algorithm selection, local-only transfers, and how to save your preferred settings.
+
+## Piping stdin and stdout
+
+croc can act as a transparent pipe between two machines. On the sender, pipe any command's output into `croc send`:
+
+```bash
+cat archive.tar.gz | croc send
+```
+
+On the receiver, use `--stdout` to print the received data to stdout, then redirect or pipe it:
+
+```bash
+croc --yes --stdout word-word-word > archive.tar.gz
+```
+
+Or combine both ends into a streaming pipeline:
+
+```bash
+# Sender
+tar -cz my-folder/ | croc send
+
+# Receiver
+croc --yes --stdout word-word-word | tar -xz
+```
+
+<Note>
+  When croc detects piped stdin, it reads from it automatically. Pass `--ignore-stdin` on the sender side if you want to suppress this behavior and send files by name instead.
+</Note>
+
+## Throttle upload speed
+
+Limit how fast croc sends data using `--throttleUpload`. Specify a number followed by a unit:
+
+| Unit suffix | Meaning |
+|-------------|---------|
+| `k` or `K`  | Kilobytes per second |
+| `m` or `M`  | Megabytes per second |
+| `g` or `G`  | Gigabytes per second |
+
+```bash
+croc --throttleUpload 500k send largefile.iso
+croc --throttleUpload 10m send video.mp4
+```
+
+`--throttleUpload` is a global flag and must appear before the `send` subcommand.
+
+## Change the hash algorithm
+
+croc hashes files to verify integrity and support resumable transfers. Three algorithms are available:
+
+<CodeGroup>
+
+```bash xxhash (default)
+croc send --hash xxhash file.txt
+```
+
+```bash imohash (faster for large files)
+croc send --hash imohash file.txt
+```
+
+```bash md5
+croc send --hash md5 file.txt
+```
+
+</CodeGroup>
+
+`imohash` is a sampling-based algorithm that is significantly faster on large files by hashing only portions of the file rather than its entirety.
+
+## Change the encryption curve
+
+croc uses elliptic-curve [PAKE](https://en.wikipedia.org/wiki/Password-authenticated_key_agreement) for key agreement. The default curve is `p256`. To select a different curve, use the `--curve` global flag on either the sender or receiver:
+
+```bash
+croc --curve p521 send file.txt
+```
+
+Available curves: `p256`, `p384`, `p521`, `siec`.
+
+<Note>
+  Both the sender and receiver must use the same curve. The receiver's curve choice is sent to the sender during the handshake, so you only need to set it on one side.
+</Note>
+
+## Local-only transfers
+
+By default croc first attempts a local network transfer and falls back to the public relay. You can control this behavior explicitly:
+
+```bash
+# Force local network only — never use the public relay
+croc --local send file.txt
+```
+
+```bash
+# Disable the automatic local relay — always use the public relay
+croc send --no-local file.txt
+```
+
+`--local` (`OnlyLocal`) causes croc to fail if no local peer is found. Use it when you want to guarantee traffic stays on your LAN. `--no-local` (`DisableLocal`) skips local discovery entirely and goes straight to the relay.
+
+## Disable multiplexing
+
+croc uses multiple TCP connections in parallel to maximize throughput. To use a single connection instead:
+
+```bash
+croc send --no-multi file.txt
+```
+
+This can be useful when connecting through strict firewalls or proxies that only allow one connection per session.
+
+## Save settings with --remember
+
+Pass `--remember` to write your current options to a config file so they are reused automatically on the next run:
+
+```bash
+croc --remember --relay myrelay.example.com:9009 send file.txt
+```
+
+Settings that can be remembered include the relay address, relay password, curve, hash algorithm, local-only mode, and overwrite behavior. The config is stored in your OS config directory (e.g., `~/.config/croc/`).
+
+To clear saved settings, delete `send.json` or `receive.json` from that directory.
+
+## Direct IP connection
+
+If you know the sender's IP address and port, you can bypass relay discovery entirely:
+
+```bash
+croc --ip 10.0.0.1:9009 word-word-word
+```
+
+For IPv6:
+
+```bash
+croc --ip [::1]:9009 word-word-word
+```
+
+When `--ip` is set, croc skips multicast peer discovery and connects directly to the specified address.
+
+## Customize the multicast address
+
+croc uses multicast for local peer discovery. The default address is `239.255.255.250`. To use a different address (for example, to isolate transfers on a shared network):
+
+```bash
+croc --multicast 239.0.0.1 send file.txt
+```
+
+Both sender and receiver must use the same multicast address for local discovery to work.
+
+## Ask mode
+
+The `--ask` flag prompts both sides to confirm the machine ID of their peer before transferring. This adds a manual verification step to guard against connecting to the wrong machine:
+
+```bash
+croc --ask send file.txt
+```
+
+The sender sees:
+
+```
+Your machine ID is 'abc123'
+Send to machine 'xyz789'? (Y/n)
+```
+
+The receiver sees:
+
+```
+Your machine id is 'xyz789'.
+Accept 'file.txt' (4.2 MB) from 'abc123'? (Y/n)
+```
+
+Both sides must confirm before the transfer begins.

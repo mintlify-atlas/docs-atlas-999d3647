@@ -1,0 +1,86 @@
+---
+title: "Use proxies and Tor with croc"
+description: "Route croc transfers through SOCKS5 or HTTP proxies, including Tor, to add a layer of network anonymity or traverse restrictive firewalls."
+---
+
+croc supports SOCKS5 and HTTP CONNECT proxies on both the send and receive side. All TCP connections croc makes — to the relay and to any data ports — are routed through the proxy. This includes Tor, which exposes a SOCKS5 interface on `127.0.0.1:9050` by default.
+
+## SOCKS5 proxy
+
+<Tabs>
+  <Tab title="Flag">
+    ```bash
+    croc --socks5 "127.0.0.1:9050" send SOMEFILE
+    ```
+  </Tab>
+  <Tab title="Environment variable">
+    ```bash
+    export SOCKS5_PROXY="127.0.0.1:9050"
+    croc send SOMEFILE
+    ```
+  </Tab>
+</Tabs>
+
+The `--socks5` flag (or `SOCKS5_PROXY` environment variable) is available on both `croc send` and `croc` (receive). Pass the same flag on the receiving machine if that side also needs to go through a proxy.
+
+### Receiving through a SOCKS5 proxy
+
+```bash
+CROC_SECRET="my-code-phrase" croc --socks5 "127.0.0.1:9050"
+```
+
+## HTTP proxy
+
+Use `--connect` to route traffic through an HTTP CONNECT proxy:
+
+<Tabs>
+  <Tab title="Flag">
+    ```bash
+    croc --connect "http://proxy.example.com:8080" send SOMEFILE
+    ```
+  </Tab>
+  <Tab title="Environment variable">
+    ```bash
+    export HTTP_PROXY="http://proxy.example.com:8080"
+    croc send SOMEFILE
+    ```
+  </Tab>
+</Tabs>
+
+## Using Tor
+
+[Tor](https://www.torproject.org/) runs a SOCKS5 proxy on `127.0.0.1:9050` by default. Start the Tor daemon and then route croc through it:
+
+<Steps>
+  <Step title="Start Tor">
+    Install and start Tor on both the sending and receiving machine. The default SOCKS5 port is `9050`.
+
+    ```bash
+    tor &
+    ```
+  </Step>
+  <Step title="Send the file">
+    ```bash
+    croc --socks5 "127.0.0.1:9050" send SOMEFILE
+    ```
+  </Step>
+  <Step title="Receive the file">
+    On the other machine, also route through Tor:
+
+    ```bash
+    CROC_SECRET="my-code-phrase" croc --socks5 "127.0.0.1:9050"
+    ```
+  </Step>
+</Steps>
+
+<Note>
+Both sides of the transfer must route through a proxy if you want end-to-end network anonymity. If only the sender uses Tor, the receiver's real IP is still visible to the relay.
+</Note>
+
+## Performance considerations
+
+<Warning>
+Proxies add latency and may significantly reduce transfer throughput, especially when using Tor. Tor routes traffic through multiple relays around the world, so expect speeds well below your normal network capacity. For large files, consider whether the anonymity benefit justifies the transfer time.
+</Warning>
+
+SOCKS5 proxies (including Tor) typically add less overhead than HTTP proxies for binary data streams. If speed is important and you just need to traverse a firewall, prefer SOCKS5 over HTTP CONNECT.

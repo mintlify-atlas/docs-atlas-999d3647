@@ -1,0 +1,68 @@
+---
+title: "croc: Secure File Transfer Between Any Two Computers"
+description: "croc is a CLI tool that lets any two computers securely transfer files using end-to-end encryption and a relay — no port-forwarding required."
+---
+
+croc is a command-line tool that makes it simple to securely transfer files and folders between any two computers. It uses Password Authenticated Key Exchange (PAKE) to establish end-to-end encrypted connections through a relay — no open ports, no server configuration, just a short code phrase shared between sender and receiver.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install croc on macOS, Windows, Linux, or build from source.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Send your first file in under a minute.
+  </Card>
+  <Card title="Sending files" icon="paper-plane" href="/guides/sending-files">
+    Send files, folders, text, and piped data with all available options.
+  </Card>
+  <Card title="Self-hosted relay" icon="server" href="/relay/overview">
+    Run your own relay server for private transfers.
+  </Card>
+</CardGroup>
+
+## Why croc?
+
+croc is the only CLI file-transfer tool that combines all of the following:
+
+- **End-to-end encryption** using PAKE — only the sender and receiver can read the data
+- **Works between any two computers** via a public relay (no port-forwarding needed)
+- **Cross-platform** — Windows, Linux, macOS, and more
+- **Resumable transfers** — interrupted transfers pick up where they left off
+- **Multiple files and folders** in a single command
+- **IPv6-first** with automatic IPv4 fallback
+- **Proxy support** for SOCKS5 and HTTP proxies, including Tor
+
+<Note>
+  All transfers are end-to-end encrypted using PAKE. The relay only sees encrypted data and never has access to the content of your files or the code phrase used to establish the session.
+</Note>
+
+## How a transfer works
+
+When you send a file, croc generates a random code phrase and displays it in your terminal. You share that code phrase with the recipient through any channel (chat, email, etc.). The recipient runs `croc <code-phrase>` on their machine, which kicks off a cryptographic handshake.
+
+The code phrase seeds a PAKE protocol between the two machines. PAKE derives a shared secret key from a low-entropy password (the code phrase) without ever transmitting the password itself. Both sides independently derive the same key and use it to encrypt the transfer with AES-256-GCM. The public relay at `croc.schollz.com:9009` brokers the connection but never sees plaintext data.
+
+<Steps>
+  <Step title="Sender runs croc send">
+    croc generates a short code phrase and displays it:
+
+    ```bash
+    croc send file.txt
+    ```
+
+    ```
+    Sending 'file.txt' (1.2 MB)
+    Code is: grove-angle-mauve
+    ```
+  </Step>
+  <Step title="Share the code phrase">
+    The sender shares the code phrase with the recipient — via chat, email, or any convenient channel.
+  </Step>
+  <Step title="Recipient runs croc with the code">
+    The recipient enters the code phrase. PAKE establishes a shared secret, and the encrypted transfer begins.
+
+    ```bash
+    CROC_SECRET=grove-angle-mauve croc
+    ```
+  </Step>
+</Steps>

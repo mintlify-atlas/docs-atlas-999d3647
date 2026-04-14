@@ -1,0 +1,126 @@
+---
+title: "croc global flags: all options and defaults"
+description: "Reference for every global flag in the croc CLI — behavior, output, network, transfer, and testing flags with defaults and environment variable equivalents."
+---
+
+Global flags are specified before any subcommand and apply to all croc operations. For example, `croc --debug send file.txt` enables debug logging for the entire send operation. Flags that affect only a specific command (`send` or `relay`) are documented in the [command reference](/reference/commands).
+
+## Behavior flags
+
+<ParamField path="--yes" type="boolean">
+  Automatically agree to all prompts, including overwrite confirmations and file acceptance. Equivalent to answering "yes" to every interactive question.
+</ParamField>
+
+<ParamField path="--overwrite" type="boolean">
+  Do not prompt before overwriting an existing file or resuming a partial transfer. The file is overwritten unconditionally.
+</ParamField>
+
+<ParamField path="--ask" type="boolean">
+  Ensure both the sender and the recipient are explicitly prompted before the transfer proceeds.
+</ParamField>
+
+<ParamField path="--remember" type="boolean">
+  Save the current settings to the croc config file for reuse on the next invocation. Saved settings include relay address, password, overwrite preference, curve, and local-only mode.
+</ParamField>
+
+<ParamField path="--classic" type="boolean">
+  Toggle classic mode. In classic mode the shared secret can be passed as a command-line argument (visible in the process list). In the default (secure) mode on Linux and macOS, `CROC_SECRET` must be used instead. Running `croc --classic` prompts you to enable or disable the mode interactively.
+</ParamField>
+
+<ParamField path="--ignore-stdin" type="boolean">
+  Ignore piped stdin even when data is available on the pipe. Useful in scripts where stdin may be connected but should not be treated as file input.
+</ParamField>
+
+## Output flags
+
+<ParamField path="--debug" type="boolean">
+  Enable verbose debug logging. Prints internal state, public IP address, relay negotiation details, and transfer progress at a low level.
+</ParamField>
+
+<ParamField path="--quiet" type="boolean">
+  Suppress all output except errors. Takes precedence over `--debug`. Useful in automation and cron jobs.
+</ParamField>
+
+<ParamField path="--stdout" type="boolean">
+  Redirect the received file to stdout instead of writing it to disk. Combine with `--yes` to suppress prompts.
+</ParamField>
+
+<ParamField path="--disable-clipboard" type="boolean">
+  Disable automatic copying of the receive code phrase to the system clipboard when sending.
+</ParamField>
+
+<ParamField path="--extended-clipboard" type="boolean">
+  Copy the full receive command to the clipboard with the secret as an environment variable (e.g. `CROC_SECRET="word-word-word" croc`). Useful on Linux and macOS where passing the secret on the command line is discouraged.
+</ParamField>
+
+## Network flags
+
+<ParamField path="--relay" type="string" default="croc.schollz.com">
+  Address of the relay server to use for the transfer. Override the default public relay with your own. Can also be set via the `CROC_RELAY` environment variable.
+
+  Example: `--relay "myrelay.example.com:9009"`
+</ParamField>
+
+<ParamField path="--relay6" type="string" default="croc6.schollz.com">
+  IPv6 relay server address. croc tries IPv6 first and falls back to IPv4. Can also be set via the `CROC_RELAY6` environment variable.
+</ParamField>
+
+<ParamField path="--pass" type="string" default="pass123">
+  Password for the relay server. Must match the password configured on the relay. Can also be set via the `CROC_PASS` environment variable. The value can be a file path — if the path exists, croc reads the password from that file.
+</ParamField>
+
+<ParamField path="--ip" type="string">
+  Set the sender's IP address explicitly when it is known in advance. Useful on complex networks where auto-discovery fails.
+
+  Example: `--ip "10.0.0.1:9009"` or `--ip "[::1]:9009"` for IPv6.
+</ParamField>
+
+<ParamField path="--local" type="boolean">
+  Force croc to use only local (LAN) connections. No relay is contacted; both computers must be on the same network.
+</ParamField>
+
+<ParamField path="--multicast" type="string" default="239.255.255.250">
+  Multicast address used for local peer discovery. Change this if `239.255.255.250` conflicts with your network configuration.
+</ParamField>
+
+<ParamField path="--internal-dns" type="boolean">
+  Use a built-in DNS stub resolver instead of the host operating system's DNS. Queries multiple public DNS servers in parallel (Cloudflare, Google, Quad9, Cisco OpenDNS) and returns the first successful result. Useful when the OS resolver is slow or unavailable.
+</ParamField>
+
+<ParamField path="--socks5" type="string">
+  SOCKS5 proxy address for all relay connections (e.g. `127.0.0.1:9050` for Tor). Can also be set via the `SOCKS5_PROXY` environment variable.
+</ParamField>
+
+<ParamField path="--connect" type="string">
+  HTTP proxy address for all relay connections. Can also be set via the `HTTP_PROXY` environment variable.
+</ParamField>
+
+## Transfer flags
+
+<ParamField path="--no-compress" type="boolean">
+  Disable in-flight compression. By default, croc compresses data before sending. Disabling compression can be faster when transferring already-compressed files (zip, jpg, mp4, etc.).
+</ParamField>
+
+<ParamField path="--curve" type="string" default="p256">
+  Elliptic curve used for PAKE key exchange and encryption. Available options: `p256`, `p384`, `p521`, `siec`. Both sender and receiver must use the same curve.
+</ParamField>
+
+<ParamField path="--throttleUpload" type="string">
+  Throttle the upload speed. Accepts human-readable values such as `500k`, `10m`, or `1g`. Leave empty for unlimited speed.
+</ParamField>
+
+<ParamField path="--out" type="string" default=".">
+  Output folder for received files. croc changes to this directory before writing received data. Defaults to the current working directory.
+</ParamField>
+
+## Testing flags
+
+<ParamField path="--testing" type="boolean">
+  Internal flag for automated testing. Not intended for regular use.
+</ParamField>
+
+## Flag precedence
+
+When `--remember` is used, saved settings are applied on subsequent runs unless a flag is explicitly provided on the command line. Explicitly provided flags always take precedence over remembered settings.
+
+Environment variables (such as `CROC_RELAY`, `CROC_PASS`, `CROC_SECRET`) take effect when the corresponding flag is not explicitly set. See [environment variables](/reference/environment-variables) for the full list.

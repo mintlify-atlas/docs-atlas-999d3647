@@ -1,0 +1,96 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "croc",
+  "projectDescription": "A CLI tool to easily and securely send files and folders between any two computers using end-to-end encryption and a relay-based peer-to-peer transfer protocol.",
+  "theme": "palm",
+  "primaryColor": "#040404",
+  "lightColor": "#242424",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Sending & Receiving",
+            "pages": [
+              "guides/sending-files",
+              "guides/receiving-files",
+              "guides/advanced-transfers"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "guides/configuration",
+              "guides/security",
+              "guides/proxies"
+            ]
+          },
+          {
+            "group": "Self-Hosted Relay",
+            "pages": [
+              "relay/overview",
+              "relay/docker",
+              "relay/systemd"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/commands",
+              "reference/flags",
+              "reference/environment-variables",
+              "reference/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "End-to-end encryption using PAKE (Password Authenticated Key Exchange)",
+    "Transfer files and folders between any two computers via relay",
+    "Resumable transfers that survive interruptions",
+    "Multiple file and folder transfers in a single command",
+    "IPv6-first with IPv4 fallback",
+    "Cross-platform: Windows, Linux, macOS",
+    "No port-forwarding or local server required",
+    "Proxy support (SOCKS5 and HTTP)",
+    "Self-hostable relay server",
+    "Pipe support (stdin/stdout)",
+    "QR code display for mobile receiving",
+    "Upload throttling and transfer speed controls"
+  ],
+  "publicApiSurface": [
+    "croc send [file(s)-or-folder]",
+    "croc [code-phrase]",
+    "croc relay",
+    "croc send --code <phrase>",
+    "croc send --text <text>",
+    "croc send --exclude <patterns>",
+    "croc send --zip",
+    "croc send --git",
+    "croc send --qr",
+    "croc --relay <address>",
+    "croc --pass <password>",
+    "croc --socks5 <proxy>",
+    "croc --curve <curve>",
+    "croc --throttleUpload <speed>",
+    "croc --classic",
+    "croc --yes --overwrite",
+    "croc --quiet",
+    "croc --out <folder>",
+    "CROC_SECRET env variable",
+    "CROC_RELAY env variable",
+    "CROC_PASS env variable"
+  ]
+}

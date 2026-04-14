@@ -1,97 +1,70 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "croc: Encrypted Peer-to-Peer File Transfer"
+description: "croc transfers files and folders between any two computers using end-to-end PAKE encryption via a relay — no port-forwarding, no server config required."
 ---
 
-## Setting up
+croc is a command-line tool that makes it simple to securely transfer files and folders between any two computers. It uses Password Authenticated Key Exchange (PAKE) to establish end-to-end encrypted connections through a relay — no open ports, no server configuration, just a single code phrase shared between sender and receiver.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install croc on macOS, Windows, Linux, or build from source.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Send your first file in under a minute.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Sending Files" icon="paper-plane" href="/guides/sending-files">
+    Send files, folders, text, and piped data with all available options.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Self-Hosted Relay" icon="server" href="/relay/overview">
+    Run your own relay server for private transfers.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why croc?
 
-Everything you need to create world-class documentation.
+croc is the only CLI file-transfer tool that combines all of the following:
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+- **End-to-end encryption** using PAKE — only sender and receiver can read the data
+- **Works between any two computers** via a public relay (no port-forwarding needed)
+- **Cross-platform** — Windows, Linux, macOS, and more
+- **Resumable transfers** — interrupted transfers pick up where they left off
+- **Multiple files and folders** in a single command
+- **IPv6-first** with automatic IPv4 fallback
+- **Proxy support** for SOCKS5 and HTTP proxies (including Tor)
 
-## Need inspiration?
+## How it works
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Sender runs croc send">
+    The sender runs `croc send <file>`. croc generates a short code phrase and displays it.
+  </Step>
+  <Step title="Share the code phrase">
+    The sender shares the code phrase with the recipient — via chat, email, or any channel.
+  </Step>
+  <Step title="Recipient runs croc with the code">
+    The recipient runs `croc <code-phrase>` on their machine and the encrypted transfer begins.
+  </Step>
+</Steps>
+
+## Explore the docs
+
+<CardGroup cols={2}>
+  <Card title="Sending & Receiving" icon="arrows-left-right" href="/guides/sending-files">
+    All the ways to send and receive files, text, and streams.
+  </Card>
+  <Card title="Advanced Transfers" icon="gear" href="/guides/advanced-transfers">
+    Pipe data, use QR codes, throttle uploads, and more.
+  </Card>
+  <Card title="Security" icon="shield-halved" href="/guides/security">
+    Understand how PAKE encryption and classic mode work.
+  </Card>
+  <Card title="Command Reference" icon="terminal" href="/reference/commands">
+    Full reference for every croc command and flag.
+  </Card>
+  <Card title="Environment Variables" icon="code" href="/reference/environment-variables">
+    Configure croc with CROC_SECRET, CROC_RELAY, and CROC_PASS.
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/reference/troubleshooting">
+    Fix common issues with connections, relays, and transfers.
+  </Card>
+</CardGroup>

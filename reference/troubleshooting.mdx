@@ -1,0 +1,241 @@
+---
+title: "Troubleshoot croc connection issues"
+description: "Solutions for common croc errors including connection failures, password mismatches, interrupted transfers, and file handling problems."
+---
+
+Most croc problems fall into a small number of categories: network or relay connectivity, mismatched secrets or passwords, timing issues between sender and receiver, and file system constraints on the receiving end. This page covers the most common errors and how to fix them.
+
+## Common issues
+
+<AccordionGroup>
+
+  <Accordion title="Connection refused / could not connect to relay">
+    croc cannot reach the relay server. This is usually a firewall or DNS problem.
+
+    **Things to try:**
+
+    - Verify that ports `9009–9013` are open outbound from both the sender and receiver machines.
+    - If you are behind a corporate firewall, ask your network administrator to allow outbound TCP on those ports.
+    - Try using the built-in DNS resolver in case your system DNS is blocking or slow:
+
+      ```bash
+      croc --internal-dns send file.txt
+      ```
+
+    - Specify the relay address with an explicit port to rule out DNS resolution problems:
+
+      ```bash
+      croc --relay "croc.schollz.com:9009" send file.txt
+      ```
+
+    - If the default public relay is unreachable from your environment, run your own relay on a machine you control and point both sides to it:
+
+      ```bash
+      # On the relay machine
+      croc relay
+
+      # Sender
+      croc --relay "myrelay.example.com:9009" send file.txt
+
+      # Receiver
+      croc --relay "myrelay.example.com:9009" word-word-word
+      ```
+  </Accordion>
+
+  <Accordion title="Password mismatch (PAKE error)">
+    A PAKE (password-authenticated key agreement) error means the code phrases or relay passwords on the two sides do not match.
+
+    **Common causes:**
+
+    - The receiver typed the code phrase incorrectly. Re-check the phrase shown on the sender's terminal.
+    - The sender is connected to a different relay than the receiver. Both sides must use the same `--relay` address.
+    - The relay was started with a custom `--pass` but the client is using the default password. Set `CROC_PASS` or `--pass` on both client sides:
+
+      ```bash
+      croc --pass "relaypassword" --relay "myrelay.example.com:9009" send file.txt
+      croc --pass "relaypassword" --relay "myrelay.example.com:9009" word-word-word
+      ```
+
+    - On Linux/macOS, `CROC_SECRET` was set to a different value on sender and receiver. Make sure both sides use the exact same secret.
+  </Accordion>
+
+  <Accordion title="Room not ready / peer disconnected">
+    The relay room was not ready when the second peer connected, or one side disconnected before the handshake completed.
+
+    **What to do:**
+
+    - This is a timing issue. Simply re-run the same command on the disconnected side using the same code phrase.
+    - Make sure the sender is running and displaying the code phrase before the receiver tries to connect.
+    - If the error recurs consistently, check network stability between both machines and the relay.
+  </Accordion>
+
+  <Accordion title="Could not secure channel">
+    The encrypted channel could not be established. This usually indicates a network interruption during the PAKE handshake or a relay misconfiguration.
+
+    **Things to try:**
+
+    - Confirm that the relay address is correct and reachable on both sides.
+    - Check that the relay password matches.
+    - Try a different encryption curve to rule out a compatibility issue:
+
+      ```bash
+      croc --curve p384 send file.txt
+      # Receiver must use the same curve
+      croc --curve p384 word-word-word
+      ```
+
+    - Run with `--debug` to see the handshake log:
+
+      ```bash
+      croc --debug send file.txt
+      ```
+  </Accordion>
+
+  <Accordion title="Classic mode confusion on Linux/macOS">
+    On Linux and macOS, croc defaults to a secure mode where the code phrase must be passed via `CROC_SECRET` rather than on the command line, to prevent exposure in the process list ([CVE-2023-43621](https://nvd.nist.gov/vuln/detail/CVE-2023-43621)).
+
+    If you run `croc send --code mycode file.txt` and see a message asking you to use `CROC_SECRET`, this is expected behavior, not a bug.
+
+    **Use CROC_SECRET (recommended):**
+
+    ```bash
+    # Send
+    CROC_SECRET="mycode" croc send file.txt
+
+    # Receive
+    CROC_SECRET="mycode" croc
+    ```
+
+    **Re-enable classic mode (single-user systems only):**
+
+    ```bash
+    croc --classic
+    ```
+
+    Running `croc --classic` prompts you to toggle the mode. When classic mode is enabled, the old behavior of passing the code on the command line is restored.
+  </Accordion>
+
+  <Accordion title="Transfer interrupted — resuming">
+    croc automatically resumes interrupted transfers. If a transfer is cut off partway through, you do not need to restart from scratch.
+
+    **To resume:**
+
+    Simply re-run the exact same commands on both sides with the same code phrase. croc detects the partially received file and continues from where it left off.
+
+    ```bash
+    # Sender — same command as before
+    CROC_SECRET="word-word-word" croc send largefile.iso
+
+    # Receiver — same command as before
+    CROC_SECRET="word-word-word" croc
+    ```
+
+    <Note>
+      Resume only works if the partial file is still present in the output directory on the receiver. If the file was deleted, the transfer starts over.
+    </Note>
+  </Accordion>
+
+  <Accordion title="File already exists / overwrite prompt">
+    When a file with the same name already exists in the output directory, croc prompts before overwriting. To skip the prompt:
+
+    ```bash
+    # Automatically overwrite
+    croc --yes --overwrite word-word-word
+
+    # Or set overwrite globally via --remember
+    croc --overwrite --remember
+    ```
+
+    Use `--yes` to suppress all prompts, and `--overwrite` to allow unconditional overwriting without prompting.
+  </Accordion>
+
+  <Accordion title="Not enough disk space">
+    croc does not pre-check available disk space before starting a transfer. If the receiver runs out of space mid-transfer, the file will be incomplete.
+
+    **Before receiving large files:**
+
+    ```bash
+    df -h .
+    ```
+
+    Use `--out` to specify a directory on a partition with more space:
+
+    ```bash
+    croc --out /mnt/external-drive word-word-word
+    ```
+  </Accordion>
+
+  <Accordion title="Invalid path detected: .ssh">
+    croc includes a security check that refuses to send files to paths that contain `.ssh` (or other sensitive directory names). This is intentional to prevent accidental overwrites of SSH keys.
+
+    If you need to transfer files into a sensitive directory, receive them to a neutral location first, then move them manually:
+
+    ```bash
+    croc --out /tmp/received word-word-word
+    mv /tmp/received/authorized_keys ~/.ssh/
+    ```
+  </Accordion>
+
+  <Accordion title="Invisible characters in filename">
+    croc validates filenames and rejects transfers where the filename contains invisible or non-printable Unicode characters. This is a security measure to prevent filename spoofing attacks.
+
+    If you encounter this error on the sending side, rename the file to remove any invisible characters before sending:
+
+    ```bash
+    # Inspect the filename bytes
+    ls -b suspicious-file*
+
+    # Rename to a clean name
+    mv "suspicious-file" "clean-filename.txt"
+    croc send clean-filename.txt
+    ```
+  </Accordion>
+
+</AccordionGroup>
+
+## Debug mode
+
+When an issue is hard to diagnose, run croc with `--debug` to see verbose output including relay negotiation, public IP detection, and transfer progress at a packet level.
+
+```bash
+croc --debug send file.txt
+```
+
+```bash
+CROC_SECRET="word-word-word" croc --debug
+```
+
+Debug output goes to stderr. You can capture it separately:
+
+```bash
+croc --debug send file.txt 2>debug.log
+```
+
+## Testing local vs relay connectivity
+
+To verify that two machines can reach each other directly (without the relay), use the `--local` flag:
+
+```bash
+# Both sender and receiver on the same LAN
+croc --local send file.txt
+CROC_SECRET="word-word-word" croc --local
+```
+
+If `--local` works but the relay does not, the problem is between your machines and the relay (firewall, DNS, or routing). If `--local` also fails, the problem is between the two machines themselves.
+
+To test relay connectivity independently, run your own relay locally and point both sides to `localhost`:
+
+```bash
+# Terminal 1 — start a local relay
+croc relay
+
+# Terminal 2 — sender
+croc --relay "localhost:9009" send file.txt
+
+# Terminal 3 — receiver
+croc --relay "localhost:9009" word-word-word
+```
+
+## Getting more help
+
+If none of the above resolves your issue, search for existing reports or open a new issue on the [croc GitHub issue tracker](https://github.com/schollz/croc/issues). Include the output of `croc --debug` (with sensitive details redacted) to help maintainers diagnose the problem.

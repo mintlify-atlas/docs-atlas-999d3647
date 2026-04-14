@@ -1,0 +1,118 @@
+---
+title: "croc security model and encryption"
+description: "How croc uses PAKE, AES-GCM end-to-end encryption, and mnemonicode code phrases to keep transfers private from the relay and third parties."
+---
+
+croc is designed so that neither the relay nor any network observer can read the content of a transfer. The sender and receiver establish a shared secret through Password Authenticated Key Exchange (PAKE) before any file data moves, and every byte of payload is encrypted with that secret before reaching the relay.
+
+## PAKE key exchange
+
+When a transfer begins, the sender and receiver each derive a session key from the code phrase using PAKE (specifically the `schollz/pake` library built on elliptic-curve Diffie-Hellman). The shared secret is never transmitted directly — only mathematical values that are useless without the code phrase are exchanged over the relay.
+
+Once both sides hold the same session key, all subsequent communication (file metadata and file content) is encrypted with that key. The relay routes opaque ciphertext and cannot inspect or tamper with it.
+
+## End-to-end encryption
+
+croc encrypts file data with **AES-256-GCM** (using PBKDF2-SHA256 to derive the key from the PAKE session key and a random 8-byte salt). AES-GCM provides both confidentiality and authenticated integrity — any modification to the ciphertext in transit causes decryption to fail with a "message authentication failed" error, and the transfer is aborted.
+
+<Info>
+The encryption is applied before data leaves the sender's machine. The relay never holds the decryption key and cannot read the content even if the relay server is compromised.
+</Info>
+
+## Code phrases
+
+croc generates a code phrase automatically using the [mnemonicode](https://github.com/schollz/mnemonicode) word list. A typical phrase looks like:
+
+```
+5-digit-number-wordA-wordB-wordC
+```
+
+The first segment is a random decimal number and the remaining segments are words drawn from the word list, separated by hyphens. The code phrase must be **more than 6 characters** — croc rejects shorter values at startup.
+
+You can supply your own phrase with `--code`:
+
+```bash
+croc send --code "my-long-custom-phrase" file.txt
+```
+
+<Warning>
+Short or guessable code phrases make your transfer vulnerable. Anyone who can guess the phrase before the intended recipient connects will receive the file instead. Use a phrase that is long and random.
+</Warning>
+
+## Secure mode vs. classic mode
+
+### Secure mode (default on Linux and macOS)
+
+On UNIX systems, croc passes the code phrase via the `CROC_SECRET` environment variable rather than as a command-line argument. This prevents the phrase from appearing in the process list (visible to other users with `ps`), which was the attack vector described in [CVE-2023-43621](https://nvd.nist.gov/vuln/detail/CVE-2023-43621).
+
+<Tabs>
+  <Tab title="Send">
+    ```bash
+    CROC_SECRET="my-code-phrase" croc send file.txt
+    ```
+  </Tab>
+  <Tab title="Receive">
+    ```bash
+    CROC_SECRET="my-code-phrase" croc
+    ```
+  </Tab>
+</Tabs>
+
+Use `--extended-clipboard` to copy the full `CROC_SECRET=... croc` command to your clipboard automatically:
+
+```bash
+croc --extended-clipboard send file.txt
+```
+
+### Classic mode
+
+Classic mode passes the code phrase on the command line, which is visible in the process list on multi-user systems. This mode exists for compatibility and single-user convenience.
+
+<Warning>
+Classic mode exposes the code phrase in `ps` output. On shared or multi-user systems, other local users can read the phrase and intercept the transfer. This was the vulnerability in CVE-2023-43621.
+</Warning>
+
+Toggle classic mode with:
+
+```bash
+croc --classic
+```
+
+Running this command prompts for confirmation and writes (or removes) a marker file at `~/.config/croc/classic_enabled`. On Windows, the process list is less accessible, so the distinction matters less.
+
+## Encryption curves
+
+The elliptic curve used for PAKE can be changed with `--curve`. Both the sender and receiver must use the same curve.
+
+| Curve | Flag value | Notes |
+|---|---|---|
+| P-256 | `p256` | Default; good balance of speed and security |
+| P-384 | `p384` | Higher security margin, slightly slower |
+| P-521 | `p521` | Maximum security, slowest |
+| SIEC | `siec` | Alternative curve implementation |
+
+```bash
+croc --curve p521 send file.txt
+```
+
+## Machine ID verification
+
+Pass `--ask` on either side to display and require confirmation of the sender's machine ID before the transfer proceeds:
+
+```bash
+croc --ask send file.txt
+```
+
+The receiver is shown the sender's machine ID and must confirm before accepting. This provides an additional layer of identity verification beyond the code phrase.
+
+## Relay trust model
+
+The relay's only role is to forward encrypted bytes between the sender and receiver. It:
+
+- Does **not** hold any encryption key.
+- Can see the room name (a SHA-256 hash of the first four characters of the code phrase), but not the code phrase itself.
+- Cannot decrypt file content or metadata.
+
+<Tip>
+For maximum privacy, self-host a relay on infrastructure you control. See `croc relay --help` for details. The relay only needs two or more open TCP ports (default 9009–9013).
+</Tip>

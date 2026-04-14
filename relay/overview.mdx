@@ -1,0 +1,104 @@
+---
+title: "Self-host a croc relay server"
+description: "Run your own croc relay to keep file transfers within your network, avoid third-party infrastructure, or meet data-residency requirements."
+---
+
+A relay is the intermediary server that connects a sender and receiver so that neither machine needs a public IP address or open ports. The relay only forwards encrypted bytes — it never has access to the file contents or the secret used to derive the encryption key. Running your own relay gives you full control over the infrastructure your transfers use.
+
+## Start the relay
+
+Run the relay with the default settings:
+
+```bash
+croc relay
+```
+
+By default, the relay listens on TCP ports **9009–9013** (five ports total). Port 9009 is the control port; the remaining ports carry transfer data. At least two ports are required.
+
+## Customize ports
+
+Use `--ports` to provide an explicit comma-separated list:
+
+```bash
+croc relay --ports 1111,1112
+```
+
+Or use `--port` to set the base port and `--transfers` to set how many additional transfer ports to open:
+
+```bash
+croc relay --port 9009 --transfers 4
+```
+
+The two approaches are equivalent — `--port 9009 --transfers 4` opens ports 9009, 9010, 9011, 9012, and 9013.
+
+## Bind to a specific host
+
+By default, the relay binds to all interfaces. To bind to a specific address:
+
+```bash
+croc relay --host 0.0.0.0
+```
+
+## Set a relay password
+
+Protect your relay with a password. Clients must supply the same password to connect:
+
+```bash
+croc relay --pass YOURPASSWORD
+```
+
+<Warning>
+  When connecting to any non-default relay, you must always supply `--pass`. The default public relay uses the passphrase `pass123`. Replace this with a strong secret on your own relay.
+</Warning>
+
+## Connect clients to your relay
+
+Both the sender and receiver must point to your relay address and supply the matching password.
+
+**Sender:**
+
+```bash
+croc --relay "myrelay.example.com:9009" --pass YOURPASSWORD send file.txt
+```
+
+**Receiver:**
+
+```bash
+croc --relay "myrelay.example.com:9009" --pass YOURPASSWORD <code>
+```
+
+## Environment variables
+
+You can set the relay address and password via environment variables to avoid repeating flags on every command:
+
+| Variable     | Equivalent flag | Description                        |
+| ------------ | --------------- | ---------------------------------- |
+| `CROC_RELAY` | `--relay`       | Address of the relay (host:port)   |
+| `CROC_PASS`  | `--pass`        | Password for the relay             |
+
+Example:
+
+```bash
+export CROC_RELAY="myrelay.example.com:9009"
+export CROC_PASS="YOURPASSWORD"
+croc send file.txt
+```
+
+## Firewall requirements
+
+Open inbound TCP traffic on every port the relay uses. With the default configuration that is ports **9009–9013**. If you used `--ports` or `--port`/`--transfers`, open those ports instead.
+
+<Note>
+  The relay is zero-knowledge — it routes opaque, end-to-end encrypted bytes and cannot read the file contents or the transfer secret. Encryption is negotiated directly between sender and receiver using PAKE before any file data is sent.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run with Docker" icon="docker" href="/relay/docker">
+    Deploy the relay as a Docker container with a single command.
+  </Card>
+  <Card title="Run as a systemd service" icon="server" href="/relay/systemd">
+    Keep the relay running on a Linux server with a systemd unit file.
+  </Card>
+</CardGroup>
